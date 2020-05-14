@@ -4,23 +4,62 @@ import 'package:provider/provider.dart';
 import '../widgets/product_item.dart';
 import '../models/products.dart';
 
-class ProductsOverviewScreen extends StatelessWidget {
+enum FilterOptions {
+  Favourites,
+  All,
+}
+
+class ProductsOverviewScreen extends StatefulWidget {
+  @override
+  _ProductsOverviewScreenState createState() => _ProductsOverviewScreenState();
+}
+
+class _ProductsOverviewScreenState extends State<ProductsOverviewScreen> {
+  bool _showOnlyFavourites = false;
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
         title: Text('My shop'),
+        actions: <Widget>[
+          PopupMenuButton(
+            itemBuilder: (_) => [
+              PopupMenuItem(
+                  child: Text('Only favourites'),
+                  value: FilterOptions.Favourites),
+              PopupMenuItem(
+                child: Text('Show all'),
+                value: FilterOptions.All,
+              ),
+            ],
+            icon: Icon(Icons.more_vert),
+            onSelected: (FilterOptions selectedValue) {
+              setState(() {
+                if (selectedValue == FilterOptions.Favourites)
+                  _showOnlyFavourites = true;
+                else
+                  _showOnlyFavourites = false;
+              });
+            },
+          )
+        ],
       ),
-      body: ProductsGrid(),
+      body: ProductsGrid(_showOnlyFavourites),
     );
   }
 }
 
 class ProductsGrid extends StatelessWidget {
+  final bool showOnlyFavourites;
+
+  ProductsGrid(this.showOnlyFavourites);
+
   @override
   Widget build(BuildContext context) {
     final productsData = Provider.of<Products>(context);
-    final products = productsData.items;
+    final products =
+        showOnlyFavourites ? productsData.favouriteItems : productsData.items;
     return GridView.builder(
       padding: const EdgeInsets.all(10),
       gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
