@@ -60,7 +60,18 @@ class _ProductsOverviewScreenState extends State<ProductsOverviewScreen> {
           )
         ],
       ),
-      body: ProductsGrid(_showOnlyFavourites),
+      body: FutureBuilder(
+        builder: (ctx, dataSnapshot) =>
+            dataSnapshot.connectionState == ConnectionState.waiting
+                ? Center(child: CircularProgressIndicator())
+                : RefreshIndicator(
+                    onRefresh: () {
+                      return Provider.of<Products>(context, listen: false)
+                          .fetchProducts();
+                    },
+                    child: ProductsGrid(_showOnlyFavourites)),
+        future: Provider.of<Products>(context, listen: false).fetchProducts(),
+      ),
       drawer: AppDrawer(),
     );
   }
