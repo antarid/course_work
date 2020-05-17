@@ -5,7 +5,11 @@ import 'dart:convert';
 import './product.dart';
 
 class Products with ChangeNotifier {
-  List<Product> _items = [];
+  List<Product> _items;
+  final String _authToken;
+  final String _userId;
+
+  Products(this._authToken, this._userId, this._items);
 
   List<Product> get items {
     return [..._items];
@@ -20,7 +24,7 @@ class Products with ChangeNotifier {
 
   Future<void> removeProduct(String id) async {
     final url =
-        'https://udemy-flutter-66e60.firebaseio.com/products/${id}.json';
+        'https://udemy-flutter-66e60.firebaseio.com/products/${id}.json?auth=$_authToken';
     final existingProductIndex =
         _items.indexWhere((element) => element.id == id);
     Product existingProduct = _items[existingProductIndex];
@@ -35,21 +39,29 @@ class Products with ChangeNotifier {
       existingProduct = null;
   }
 
-  Future<void> fetchProducts() async {
-    const url = 'https://udemy-flutter-66e60.firebaseio.com/products.json';
+  Future<void> fetchProducts([bool filterByUser = false]) async {
+    final url =
+        'https://udemy-flutter-66e60.firebaseio.com/products.json?auth=$_authToken${filterByUser ? '&orderBy="creatorId"&equalTo="$_userId"' : ""}';
     try {
       final response = await http.get(url);
       final responseObject = json.decode(response.body) as Map<String, dynamic>;
       final List<Product> fetchedProducts = [];
       if (responseObject != null) {
-        responseObject.forEach((key, value) {
+        final favouritesUrl =
+            'https://udemy-flutter-66e60.firebaseio.com/userFavourites/$_userId.json?auth=$_authToken';
+        final favouritesResponse = await http.get(favouritesUrl);
+        final favouritesData =
+            json.decode(favouritesResponse.body) as Map<String, dynamic>;
+        responseObject.forEach((productId, product) {
           fetchedProducts.add(Product(
-            id: key,
-            description: value['description'],
-            title: value['title'],
-            imageUrl: value['imageUrl'],
-            price: value['price'],
-            isFavourite: value['isFavourite'],
+            id: productId,
+            description: product['description'],
+            title: product['title'],
+            imageUrl: product['imageUrl'],
+            price: product['price'],
+            isFavourite: favouritesData == null
+                ? false
+                : favouritesData[productId] ?? false,
           ));
         });
       }
@@ -64,7 +76,7 @@ class Products with ChangeNotifier {
   Future<void> updateOrAddProduct(Product product) async {
     if (product.id != null) {
       final url =
-          'https://udemy-flutter-66e60.firebaseio.com/products/${product.id}.json';
+          'https://udemy-flutter-66e60.firebaseio.com/products/${product.id}.json?auth=$_authToken';
       await http.patch(
         url,
         body: json.encode(
@@ -81,7 +93,8 @@ class Products with ChangeNotifier {
       notifyListeners();
     } else
       try {
-        final url = 'https://udemy-flutter-66e60.firebaseio.com/products.json';
+        final url =
+            'https://udemy-flutter-66e60.firebaseio.com/products.json?auth=$_authToken';
         final response = await http.post(
           url,
           body: json.encode(
@@ -90,7 +103,7 @@ class Products with ChangeNotifier {
               'description': product.description,
               'imageUrl': product.imageUrl,
               'price': product.price,
-              'isFavourite': product.isFavourite,
+              'creatorId': _userId,
             },
           ),
         );

@@ -10,12 +10,11 @@ class UserProductsScreen extends StatelessWidget {
   static const routeName = '/user-products';
 
   Future<void> refetchProducts(BuildContext context) async {
-    await Provider.of<Products>(context, listen: false).fetchProducts();
+    await Provider.of<Products>(context, listen: false).fetchProducts(true);
   }
 
   @override
   Widget build(BuildContext context) {
-    final productsData = Provider.of<Products>(context);
     return Scaffold(
       appBar: AppBar(
         title: const Text('Your products'),
@@ -31,20 +30,28 @@ class UserProductsScreen extends StatelessWidget {
               }),
         ],
       ),
-      body: RefreshIndicator(
-        onRefresh: () => refetchProducts(context),
-        child: Padding(
-          padding: EdgeInsets.all(8),
-          child: ListView.builder(
-            itemBuilder: (ctx, index) => Column(
-              children: <Widget>[
-                UserProductItem(productsData.items[index]),
-                Divider(),
-              ],
-            ),
-            itemCount: productsData.items.length,
-          ),
-        ),
+      body: FutureBuilder(
+        future: refetchProducts(context),
+        builder: (ctx, dataSnapshot) =>
+            dataSnapshot.connectionState == ConnectionState.waiting
+                ? Center(child: CircularProgressIndicator())
+                : RefreshIndicator(
+                    onRefresh: () => refetchProducts(context),
+                    child: Consumer<Products>(
+                      builder: (ctx, productsData, child) => Padding(
+                        padding: EdgeInsets.all(8),
+                        child: ListView.builder(
+                          itemBuilder: (ctx, index) => Column(
+                            children: <Widget>[
+                              UserProductItem(productsData.items[index]),
+                              Divider(),
+                            ],
+                          ),
+                          itemCount: productsData.items.length,
+                        ),
+                      ),
+                    ),
+                  ),
       ),
       drawer: AppDrawer(),
     );
